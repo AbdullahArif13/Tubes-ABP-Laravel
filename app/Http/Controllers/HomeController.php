@@ -10,29 +10,33 @@ class HomeController extends Controller
 {
     public function index()
     {
-        // Gunakan config() agar lebih konsisten dengan .env
         $baseUrl = env('JAVA_API_URL');
-        
-        // Sesuaikan key session dengan yang di-set saat login
         $token = Session::get('user_token'); 
 
         try {
-            // Ambil data hewan dari API Java
-            $response = Http::withToken($token)->get("{$baseUrl}/animals");
+            /** * PENYESUAIAN PENTING:
+             * Berdasarkan HewanController.java, rutenya adalah /animalshelter/pengguna
+             */
+            $response = Http::withToken($token)->get("{$baseUrl}/animalshelter/pengguna");
 
             if ($response->successful()) {
-                // Pastikan struktur JSON-nya sesuai (misal: { "data": [...] })
-                $animals = $response->json()['data'] ?? $response->json();
+                $result = $response->json();
+                
+                /**
+                 * Sesuai HewanService.java method viewHewanPengguna:
+                 * Response langsung mengembalikan List<Hewan> melalui BaseResponse.
+                 * Jika BaseResponse lo membungkusnya di key 'data', maka gunakan $result['data'].
+                 */
+                $animals = $result['data'] ?? $result; 
             } else {
                 Log::warning("Gagal ambil data hewan dari Java: " . $response->status());
-                $animals = config('dummy_data.animals', []);
+                $animals = []; // Kosongkan jika gagal agar tidak error di view
             }
         } catch (\Exception $e) {
             Log::error("Koneksi ke Java Gagal: " . $e->getMessage());
-            $animals = config('dummy_data.animals', []);
+            $animals = [];
         }
 
-        // Pastikan path view-nya benar (sesuai folder resources/views/beranda/home/index.blade.php)
         return view('beranda.home.index', compact('animals'));
     }
 }
